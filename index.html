@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Zahlen richtig schreiben – Lernspiel</title>
+  <style>
+    :root{
+      --bg:#fff7e6;
+      --card:#ffffff;
+      --ink:#222;
+      --accent:#4dabf7;
+      --good:#2f9e44;
+      --warn:#f08c00;
+      --bad:#ff6b6b;
+      --shadow: 0 10px 25px rgba(0,0,0,.08);
+      --radius: 18px;
+      --font: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:var(--font);
+      color:var(--ink);
+      background: radial-gradient(circle at 10% 0%, #fff, var(--bg));
+    }
+    header{
+      padding:12px 14px;
+      background: rgba(255,255,255,.92);
+      position: sticky; top: 0; z-index: 10;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      backdrop-filter: blur(8px);
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .title{
+      font-weight:1000; font-size:18px;
+      display:flex; align-items:center; gap:10px;
+      user-select:none;
+    }
+    .dot{
+      width:38px; height:38px; border-radius:14px;
+      background: conic-gradient(from 180deg, #ff6b6b, #ffd43b, #4dabf7, #69db7c);
+      box-shadow: var(--shadow);
+      flex: 0 0 auto;
+    }
+    .tabs{display:flex; gap:8px; flex-wrap:wrap;}
+    .tab{
+      border:none; cursor:pointer; font-weight:1000;
+      padding:10px 14px; border-radius:999px;
+      background:#f1f3f5;
+    }
+    .tab.active{background:#111; color:#fff;}
+    main{max-width:1100px; margin:0 auto; padding:14px;}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+    }
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    h2{margin:0 0 10px; font-size:18px;}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    .btn{
+      border:none; cursor:pointer;
+      border-radius:14px;
+      padding:10px 14px;
+      font-weight:1000;
+      background:#111; color:#fff;
+      user-select:none;
+    }
+    .btn.secondary{background:#e9ecef; color:#111;}
+    .btn.good{background:var(--good);}
+    .btn.warn{background:var(--warn);}
+    .btn:disabled{opacity:.55; cursor:not-allowed;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      background:#f8f9fa;
+      border-radius:999px;
+      padding:10px 12px;
+      font-weight:1000;
+      user-select:none;
+    }
+    .bigDigit{
+      font-size:64px; font-weight:1000; line-height:1; margin:0;
+      letter-spacing:2px;
+    }
+    .chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+    .chip{
+      padding:8px 10px; border-radius:999px;
+      background:#f1f3f5; font-weight:1000;
+      border:2px solid transparent;
+      cursor:pointer; user-select:none;
+    }
+    .chip.active{background:#111; color:#fff;}
+    .hint{margin:8px 0 0; color:#555; font-weight:900;}
+
+    .canvasWrap{
+      position:relative;
+      width:100%;
+      aspect-ratio: 4 / 3;
+      border-radius:16px;
+      overflow:hidden;
+      border: 2px solid rgba(0,0,0,.08);
+      background:
+        linear-gradient(#fff,#fff) padding-box,
+        repeating-linear-gradient(
+          0deg,
+          rgba(0,0,0,.06),
+          rgba(0,0,0,.06) 2px,
+          transparent 2px,
+          transparent 26px
+        ) border-box;
+      touch-action:none;
+    }
+    canvas{width:100%; height:100%; display:block;}
+    .overlay{
+      position:absolute; left:12px; top:12px;
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(0,0,0,.08);
+      padding:8px 10px; border-radius:12px;
+      font-weight:1000;
+      user-select:none;
+    }
+
+    /* ✅ Aufgabe 2: Grid wird per JS angepasst (2 / 3 / 4 Optionen) */
+    .choiceGrid{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap:12px; margin-top:10px;
+    }
+    @media (max-width: 600px){
+      .choiceGrid{ grid-template-columns: repeat(2, 1fr) !important; }
+    }
+
+    .choice{
+      background:#f8f9fa; border-radius:18px;
+      border:3px solid transparent;
+      padding:10px; cursor:pointer;
+      min-height:140px;
+      display:flex; align-items:center; justify-content:center;
+      user-select:none;
+      transition: transform .06s ease, box-shadow .12s ease;
+    }
+    .choice:hover{ box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+    .choice:active{transform: scale(.99);}
+    .choice.correct{border-color: var(--good);}
+    .choice.wrong{border-color: var(--bad);}
+    .toast{
+      margin-top:10px;
+      border-radius:16px;
+      padding:12px 14px;
+      font-weight:1000;
+      display:none;
+      align-items:center; justify-content:space-between; gap:10px;
+      background:#f1f3f5;
+      border:2px solid rgba(0,0,0,.06);
+    }
+    .toast.good{background:#ebfbee; border-color: rgba(47,158,68,.25);}
+    .toast.bad{background:#fff4e6; border-color: rgba(240,140,0,.25);}
+    .bigEmoji{font-size:44px; text-align:center; margin:10px 0;}
+    .mini{margin-top:10px; font-size:12px; color:#666; font-weight:900;}
+
+    /* ✅ Konfetti-Canvas (über allem) */
+    #confettiCanvas{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      pointer-events:none;
+      z-index:9999;
+      display:none;
+    }
+
+    /* ⭐ Anzeige in Aufgabe 2 */
+    .starBar{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background:#f8f9fa; border:2px solid rgba(0,0,0,.06);
+      padding:10px 12px; border-radius:16px;
+      font-weight:1000;
+      margin-top:10px;
+    }
+    .stars{
+      font-size:22px;
+      letter-spacing:1px;
+      white-space:nowrap;
+    }
+    .levelTag{
+      font-size:13px;
+      font-weight:1000;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#111;
+      color:#fff;
+      white-space:nowrap;
+    }
+  </style>
+</head>
+
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<header>
+  <div class="title">
+    <div class="dot" aria-hidden="true"></div>
+    Zahlen-Spiel ✨
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab1">Aufgabe 1: Schreiben</button>
+    <button class="tab" id="tab2">Aufgabe 2: Antippen</button>
+  </div>
+</header>
+
+<main>
+  <section id="view1" class="grid">
+    <div class="card">
+      <h2>Aufgabe 1: Nachspuren → frei schreiben</h2>
+
+      <div class="row">
+        <div class="pill">Zahl: <span id="digitLabel" class="bigDigit">1</span></div>
+        <button class="btn secondary" id="prevDigit">◀︎</button>
+        <button class="btn secondary" id="nextDigit">▶︎</button>
+        <button class="btn warn" id="clearInk">🧽 Wischen</button>
+        <button class="btn good" id="checkFree" style="display:none;">✅ Prüfen</button>
+      </div>
+
+      <div class="chips">
+        <div class="chip active" data-stage="solid">Linie</div>
+        <div class="chip" data-stage="dashed">Striche</div>
+        <div class="chip" data-stage="dotted">Punkte</div>
+        <div class="chip" data-stage="none">Frei</div>
+        <button class="btn good" id="nextStage">⭐ Nächste Stufe</button>
+      </div>
+
+      <p class="hint" id="stageHint">Spure die Zahl nach. Bleib auf der Linie!</p>
+
+      <div class="canvasWrap">
+        <div class="overlay">✏️ Male mit dem Finger / der Maus</div>
+        <canvas id="traceCanvas" width="900" height="675"></canvas>
+      </div>
+
+      <div class="mini">
+        ✅ Pfeile/Schreibrichtung nur bei „Linie“ sichtbar.<br>
+        ✅ „Frei“: erst malen → dann „✅ Prüfen“ → danach wird die Vergleichs-Vorlage kurz eingeblendet.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Einstellungen</h2>
+      <div class="row">
+        <label class="pill">Stiftbreite:
+          <input id="penSize" type="range" min="6" max="26" value="14">
+          <span id="penSizeVal">14</span>
+        </label>
+        <label class="pill">Vorlage:
+          <input id="guideOpacity" type="range" min="0" max="100" value="70">
+          <span id="guideOpacityVal">70%</span>
+        </label>
+      </div>
+      <div class="bigEmoji">🧡</div>
+      <div class="mini">Tipp: In „Frei“ hilft der rote Startpunkt.</div>
+    </div>
+  </section>
+
+  <section id="view2" class="grid" style="display:none;">
+    <div class="card">
+      <h2>Aufgabe 2: Tippe die richtige Zahl an</h2>
+
+      <div class="row">
+        <div class="pill">Finde: <span id="findDigit" class="bigDigit">3</span></div>
+        <button class="btn secondary" id="newRound">🎲 Neue Runde</button>
+      </div>
+
+      <div class="starBar" aria-label="Sterne und Schwierigkeit">
+        <div class="stars" id="stars">☆☆☆☆☆☆☆☆☆☆</div>
+        <div class="levelTag" id="levelTag">Einsteiger</div>
+      </div>
+
+      <div class="choiceGrid" id="choices"></div>
+
+      <div class="toast" id="toast">
+        <div id="toastText">…</div>
+        <div id="toastIcon" style="font-size:34px;">⭐</div>
+      </div>
+
+      <div class="mini">Je 10 ⭐ wird es schwieriger: Einsteiger → Fortgeschritten → Profi → Meister.</div>
+    </div>
+
+    <div class="card">
+      <h2>Belohnung</h2>
+      <div class="bigEmoji" id="reward2">🏆</div>
+      <div class="mini">Richtig: Konfetti + Fanfare • Falsch: kurzer Ton</div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* =========
+   ✅ Sound (je ~1 Sekunde) – offline, ohne Dateien
+   ========= */
+let _audioCtx = null;
+function getAudioCtx(){
+  if(!_audioCtx){
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(_audioCtx.state === "suspended") _audioCtx.resume();
+  return _audioCtx;
+}
+
+function playBrassBlip({freq=440, start=0, dur=0.20, gain=0.18}){
+  const ctx = getAudioCtx();
+  const t0 = ctx.currentTime + start;
+
+  const osc = ctx.createOscillator();
+  const filter = ctx.createBiquadFilter();
+  const g = ctx.createGain();
+
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(freq, t0);
+
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(freq * 2.2, t0);
+  filter.Q.setValueAtTime(3.2, t0);
+
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.03);
+  g.gain.exponentialRampToValueAtTime(gain * 0.55, t0 + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+  osc.connect(filter);
+  filter.connect(g);
+  g.connect(ctx.destination);
+
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.02);
+}
+
+function playFanfare1s(){
+  const C4=261.63, E4=329.63, G4=392.00, C5=523.25;
+  playBrassBlip({freq:C4, start:0.00, dur:0.22, gain:0.16});
+  playBrassBlip({freq:E4, start:0.22, dur:0.22, gain:0.16});
+  playBrassBlip({freq:G4, start:0.44, dur:0.22, gain:0.17});
+  playBrassBlip({freq:C5, start:0.66, dur:0.32, gain:0.18});
+}
+
+function playLose1s(){
+  const ctx = getAudioCtx();
+  const t0 = ctx.currentTime;
+
+  function tone(freq, start, dur, type, gain){
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0 + start);
+    g.gain.setValueAtTime(0.0001, t0 + start);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t0 + start);
+    osc.stop(t0 + start + dur + 0.02);
+  }
+
+  tone(220, 0.00, 0.35, "triangle", 0.12);
+  tone(196, 0.18, 0.35, "triangle", 0.10);
+  tone(164.81, 0.36, 0.40, "sine", 0.09);
+}
+
+/* =========
+   ✅ Konfetti (ohne Library)
+   ========= */
+const confettiCanvas = document.getElementById("confettiCanvas");
+const cfx = confettiCanvas.getContext("2d");
+let confettiRAF = null;
+let confettiEndAt = 0;
+let confettiParticles = [];
+
+function resizeConfetti(){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  confettiCanvas.width  = Math.floor(window.innerWidth * dpr);
+  confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+  cfx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize", resizeConfetti);
+
+function launchConfetti(durationMs=1100){
+  cancelConfetti();
+  resizeConfetti();
+  confettiCanvas.style.display = "block";
+
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  confettiEndAt = performance.now() + durationMs;
+
+  const colors = ["#ff6b6b","#ffd43b","#4dabf7","#69db7c","#845ef7","#ffa8a8","#74c0fc"];
+  confettiParticles = [];
+
+  const count = 190;
+  for(let i=0;i<count;i++){
+    const fromLeft = Math.random() < 0.5;
+    const x = fromLeft ? -20 : W + 20;
+    const y = Math.random() * H * 0.55;
+
+    const speed = 6 + Math.random()*6;
+    const angle = fromLeft ? (Math.random()*0.7 - 0.15) : (Math.PI - (Math.random()*0.7 - 0.15));
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed - (3 + Math.random()*3);
+
+    confettiParticles.push({
+      x, y, vx, vy,
+      g: 0.18 + Math.random()*0.12,
+      w: 6 + Math.random()*8,
+      h: 6 + Math.random()*10,
+      rot: Math.random()*Math.PI,
+      vr: (Math.random()*0.25 - 0.125),
+      color: colors[Math.floor(Math.random()*colors.length)],
+      alpha: 1
+    });
+  }
+
+  const tick = ()=>{
+    const now = performance.now();
+    cfx.clearRect(0,0,window.innerWidth, window.innerHeight);
+
+    const timeLeft = Math.max(0, confettiEndAt - now);
+    const fade = Math.min(1, timeLeft / 350);
+
+    for(const p of confettiParticles){
+      p.vy += p.g;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+
+      cfx.save();
+      cfx.globalAlpha = p.alpha * fade;
+      cfx.translate(p.x, p.y);
+      cfx.rotate(p.rot);
+      cfx.fillStyle = p.color;
+      cfx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      cfx.restore();
+    }
+
+    if(now < confettiEndAt){
+      confettiRAF = requestAnimationFrame(tick);
+    }else{
+      cancelConfetti();
+    }
+  };
+
+  confettiRAF = requestAnimationFrame(tick);
+}
+
+function cancelConfetti(){
+  if(confettiRAF){
+    cancelAnimationFrame(confettiRAF);
+    confettiRAF = null;
+  }
+  cfx.clearRect(0,0,window.innerWidth, window.innerHeight);
+  confettiCanvas.style.display = "none";
+  confettiParticles = [];
+}
+
+/* =========
+   DIGIT SHAPES (0..100 Koordinaten)
+   ========= */
+function strokeDigit(ctx, d){
+  ctx.save();
+  if (d !== 1 && d !== 4 && d !== 7 && d !== 9) ctx.transform(1, 0, -0.06, 1, 0, 0);
+  ctx.beginPath();
+
+  switch(d){
+    case 0:
+      ctx.moveTo(52, 14);
+      ctx.quadraticCurveTo(72, 16, 76, 38);
+      ctx.quadraticCurveTo(80, 62, 70, 80);
+      ctx.quadraticCurveTo(60, 96, 44, 94);
+      ctx.quadraticCurveTo(26, 92, 22, 72);
+      ctx.quadraticCurveTo(18, 50, 26, 30);
+      ctx.quadraticCurveTo(34, 10, 52, 14);
+      break;
+
+    case 1:
+      ctx.moveTo(18, 44);
+      ctx.lineTo(58, 10);
+      ctx.lineTo(58, 94);
+      break;
+
+    case 2:
+      ctx.moveTo(28, 30);
+      ctx.quadraticCurveTo(36, 14, 58, 16);
+      ctx.quadraticCurveTo(82, 18, 76, 36);
+      ctx.quadraticCurveTo(70, 52, 38, 70);
+      ctx.quadraticCurveTo(20, 80, 18, 92);
+      ctx.lineTo(82, 92);
+      break;
+
+    case 3:
+      ctx.moveTo(30, 22);
+      ctx.quadraticCurveTo(50, 12, 68, 18);
+      ctx.quadraticCurveTo(84, 24, 72, 38);
+      ctx.quadraticCurveTo(62, 50, 46, 52);
+      ctx.quadraticCurveTo(64, 54, 74, 66);
+      ctx.quadraticCurveTo(86, 82, 64, 90);
+      ctx.quadraticCurveTo(44, 96, 28, 88);
+      break;
+
+    case 4: {
+      const xL = 28, yTop = 10, yMid = 60;
+      const xR = 86;
+      const xV = 66, yBottom = 94;
+      ctx.moveTo(xL, yTop);
+      ctx.lineTo(xL, yMid);
+      ctx.lineTo(xR, yMid);
+      ctx.moveTo(xV, yTop);
+      ctx.lineTo(xV, yBottom);
+      break;
+    }
+
+    case 5:
+      ctx.moveTo(80, 18);
+      ctx.lineTo(30, 18);
+      ctx.lineTo(30, 48);
+      ctx.quadraticCurveTo(44, 42, 60, 44);
+      ctx.quadraticCurveTo(88, 48, 76, 74);
+      ctx.quadraticCurveTo(66, 96, 34, 90);
+      break;
+
+    case 6:
+      ctx.moveTo(74, 22);
+      ctx.quadraticCurveTo(56, 12, 40, 20);
+      ctx.quadraticCurveTo(18, 34, 22, 62);
+      ctx.quadraticCurveTo(26, 92, 56, 92);
+      ctx.quadraticCurveTo(82, 92, 78, 66);
+      ctx.quadraticCurveTo(74, 48, 48, 50);
+      ctx.quadraticCurveTo(30, 52, 22, 62);
+      break;
+
+    case 7:
+      ctx.moveTo(18, 14);
+      ctx.lineTo(88, 14);
+      ctx.moveTo(88, 14);
+      ctx.lineTo(58, 54);
+      ctx.lineTo(40, 94);
+      ctx.moveTo(26, 58);
+      ctx.lineTo(78, 58);
+      break;
+
+    case 8:
+      ctx.moveTo(52, 16);
+      ctx.quadraticCurveTo(76, 18, 70, 38);
+      ctx.quadraticCurveTo(66, 52, 52, 52);
+      ctx.quadraticCurveTo(34, 52, 32, 36);
+      ctx.quadraticCurveTo(30, 18, 52, 16);
+
+      ctx.moveTo(52, 52);
+      ctx.quadraticCurveTo(78, 56, 76, 76);
+      ctx.quadraticCurveTo(74, 94, 52, 94);
+      ctx.quadraticCurveTo(30, 94, 28, 76);
+      ctx.quadraticCurveTo(26, 56, 52, 52);
+      break;
+
+    /* ✅ 9: perfekt, kein Doppelstrich rechts */
+    case 9:
+      ctx.moveTo(70, 22);
+      ctx.bezierCurveTo(52, 10, 30, 18, 30, 42);
+      ctx.bezierCurveTo(30, 70, 62, 74, 74, 58);
+      ctx.bezierCurveTo(84, 46, 82, 28, 70, 22);
+
+      ctx.moveTo(80, 26);
+      ctx.lineTo(80, 78);
+      ctx.quadraticCurveTo(80, 94, 62, 94);
+      ctx.quadraticCurveTo(44, 94, 38, 86);
+      break;
+  }
+
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* =========
+   STARTPUNKTE (0..100)
+   ========= */
+const startPoints = {
+  0:[52,14], 1:[18,44], 2:[28,30], 3:[30,22], 4:[28,10],
+  5:[30,18], 6:[74,22], 7:[18,14], 8:[52,16], 9:[70,22]
+};
+
+/* =========
+   PFEIL-SEGMENTE (LINE / QUAD / CUBIC)
+   ========= */
+const strokeHints = {
+  0: [{ n:1, labelAt:0, segs:[
+    {kind:"quad", from:[52,14], cp:[34,10], to:[26,30]},
+    {kind:"quad", from:[26,30], cp:[18,50], to:[22,72]},
+    {kind:"quad", from:[22,72], cp:[26,92], to:[44,94]},
+    {kind:"quad", from:[44,94], cp:[60,96], to:[70,80]},
+    {kind:"quad", from:[70,80], cp:[80,62], to:[76,38]},
+    {kind:"quad", from:[76,38], cp:[72,16], to:[52,14]},
+  ]}],
+  1: [{ n:1, labelAt:0, segs:[
+    {kind:"line", from:[18,44], to:[58,10]},
+    {kind:"line", from:[58,10], to:[58,94]}
+  ]}],
+  2: [{ n:1, labelAt:0, segs:[
+    {kind:"quad", from:[28,30], cp:[36,14], to:[58,16]},
+    {kind:"quad", from:[58,16], cp:[82,18], to:[76,36]},
+    {kind:"quad", from:[76,36], cp:[70,52], to:[38,70]},
+    {kind:"quad", from:[38,70], cp:[20,80], to:[18,92]},
+    {kind:"line", from:[18,92], to:[82,92]}
+  ]}],
+  3: [{ n:1, labelAt:0, segs:[
+    {kind:"quad", from:[30,22], cp:[50,12], to:[68,18]},
+    {kind:"quad", from:[68,18], cp:[84,24], to:[72,38]},
+    {kind:"quad", from:[72,38], cp:[62,50], to:[46,52]},
+    {kind:"quad", from:[46,52], cp:[64,54], to:[74,66]},
+    {kind:"quad", from:[74,66], cp:[86,82], to:[64,90]},
+    {kind:"quad", from:[64,90], cp:[44,96], to:[28,88]},
+  ]}],
+  4: [
+    { n:1, labelAt:0, segs:[
+      {kind:"line", from:[28,10], to:[28,60]},
+      {kind:"line", from:[28,60], to:[86,60]},
+    ]},
+    { n:2, labelAt:0, segs:[ {kind:"line", from:[66,10], to:[66,94]} ] }
+  ],
+  5: [
+    {
+      labelAt: 0,
+      labelLines: ["2","1"],
+      segs: [
+        { kind:"line", from:[30,18], to:[30,48] },
+        { kind:"quad", from:[30,48], cp:[44,42], to:[60,44] },
+        { kind:"quad", from:[60,44], cp:[88,48], to:[76,74] },
+        { kind:"quad", from:[76,74], cp:[66,96], to:[34,90] },
+      ]
+    },
+    { noLabel:true, segs: [{ kind:"line", from:[30,18], to:[80,18] }] }
+  ],
+  6: [{ n:1, labelAt:0, segs:[
+    {kind:"quad", from:[74,22], cp:[56,12], to:[40,20]},
+    {kind:"quad", from:[40,20], cp:[18,34], to:[22,62]},
+    {kind:"quad", from:[22,62], cp:[26,92], to:[56,92]},
+    {kind:"quad", from:[56,92], cp:[82,92], to:[78,66]},
+    {kind:"quad", from:[78,66], cp:[74,48], to:[48,50]},
+    {kind:"quad", from:[48,50], cp:[30,52], to:[22,62]},
+  ]}],
+  7: [
+    { n:1, labelAt:0, segs:[
+      {kind:"line", from:[18,14], to:[88,14]},
+      {kind:"line", from:[88,14], to:[58,54]},
+      {kind:"line", from:[58,54], to:[40,94]},
+    ]},
+    { n:2, labelAt:0, segs:[ {kind:"line", from:[26,58], to:[78,58]} ] }
+  ],
+  8: [
+    { n:1, labelAt:0, segs:[
+      { kind:"quad", from:[52,16], cp:[30,18], to:[32,36] },
+      { kind:"quad", from:[32,36], cp:[34,52], to:[52,52] },
+      { kind:"quad", from:[52,52], cp:[66,52], to:[70,38] },
+      { kind:"quad", from:[70,38], cp:[76,18], to:[52,16] },
+      { kind:"quad", from:[52,52], cp:[78,56], to:[76,76] },
+      { kind:"quad", from:[76,76], cp:[74,94], to:[52,94] },
+      { kind:"quad", from:[52,94], cp:[30,94], to:[28,76] },
+      { kind:"quad", from:[28,76], cp:[26,56], to:[52,52] },
+    ]}
+  ],
+  9: [
+    { n:1, labelAt:0, segs:[
+      { kind:"cubic", from:[70,22], c1:[52,10], c2:[30,18], to:[30,42] },
+      { kind:"cubic", from:[30,42], c1:[30,70], c2:[62,74], to:[74,58] },
+      { kind:"cubic", from:[74,58], c1:[84,46], c2:[82,28], to:[70,22] },
+    ]},
+    {
+      noLabel: true,
+      segs:[
+        { kind:"line", from:[80,26], to:[80,78] },
+        { kind:"quad", from:[80,78], cp:[80,94], to:[62,94] },
+        { kind:"quad", from:[62,94], cp:[44,94], to:[38,86] },
+      ]
+    }
+  ]
+};
+
+/* =========
+   Pfeile zeichnen
+   ========= */
+function drawArrowHead(ctx, x, y, angle){
+  const head = 7;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - head*Math.cos(angle - Math.PI/6), y - head*Math.sin(angle - Math.PI/6));
+  ctx.lineTo(x - head*Math.cos(angle + Math.PI/6), y - head*Math.sin(angle + Math.PI/6));
+  ctx.closePath();
+  ctx.fill();
+}
+function tangentAngleForSeg(seg){
+  if(seg.kind === "line"){
+    const [x1,y1]=seg.from, [x2,y2]=seg.to;
+    return Math.atan2(y2-y1, x2-x1);
+  }
+  if(seg.kind === "quad"){
+    const [cx,cy]=seg.cp, [x2,y2]=seg.to;
+    return Math.atan2(y2-cy, x2-cx);
+  }
+  const [c2x,c2y]=seg.c2, [x2,y2]=seg.to;
+  return Math.atan2(y2-c2y, x2-c2x);
+}
+function drawSegPath(ctx, seg){
+  const [x1,y1]=seg.from, [x2,y2]=seg.to;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  if(seg.kind === "line"){
+    ctx.lineTo(x2,y2);
+  } else if(seg.kind === "quad"){
+    const [cx,cy]=seg.cp;
+    ctx.quadraticCurveTo(cx,cy,x2,y2);
+  } else {
+    const [c1x,c1y]=seg.c1, [c2x,c2y]=seg.c2;
+    ctx.bezierCurveTo(c1x,c1y,c2x,c2y,x2,y2);
+  }
+  ctx.stroke();
+  const ang = tangentAngleForSeg(seg);
+  ctx.save();
+  ctx.fillStyle = ctx.strokeStyle;
+  drawArrowHead(ctx, x2, y2, ang);
+  ctx.restore();
+}
+function drawStrokeHints(ctx, digit){
+  const hints = strokeHints[digit];
+  if(!hints) return;
+
+  ctx.save();
+  ctx.strokeStyle = "#111";
+  ctx.fillStyle   = "#111";
+  ctx.lineWidth   = 4;
+  ctx.lineCap     = "round";
+  ctx.lineJoin    = "round";
+  ctx.setLineDash([]);
+
+  const fontFamily = getComputedStyle(document.body).fontFamily;
+  ctx.font = `900 14px ${fontFamily}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  hints.forEach(group=>{
+    group.segs.forEach((seg, i)=>{
+      drawSegPath(ctx, seg);
+
+      if(group.noLabel) return;
+      const labelIndex = (group.labelAt ?? 0);
+      if(i !== labelIndex) return;
+
+      const [x1,y1] = seg.from;
+      const r = 11;
+
+      ctx.save();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(x1, y1, r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#111";
+      if(Array.isArray(group.labelLines) && group.labelLines.length){
+        const lineGap = 10;
+        const totalH = (group.labelLines.length - 1) * lineGap;
+        group.labelLines.forEach((txt, idx)=>{
+          ctx.fillText(String(txt), x1, y1 - totalH/2 + idx*lineGap);
+        });
+      } else {
+        ctx.fillText(String(group.n), x1, y1+0.5);
+      }
+      ctx.restore();
+    });
+  });
+
+  ctx.restore();
+}
+function drawStartPoint(ctx, digit){
+  const p = startPoints[digit] || [26,20];
+  const [x,y] = p;
+
+  ctx.save();
+  ctx.fillStyle = "#ff6b6b";
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, y, 10, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* =========
+   TEMPLATE (Pfeile nur bei Linie)
+   ========= */
+function drawDigitTemplate(ctx, digit, stageMode, opacity){
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const size = Math.min(w, h) * 0.78;
+  const left = (w - size) / 2;
+  const top  = (h - size) / 2;
+
+  if(stageMode !== "none"){
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 16;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    if(stageMode === "dashed"){
+      ctx.setLineDash([22, 26]);
+    } else if(stageMode === "dotted"){
+      ctx.setLineDash([1, 24]);
+    } else {
+      ctx.setLineDash([]);
+    }
+
+    ctx.translate(left, top);
+    ctx.scale(size/100, size/100);
+    strokeDigit(ctx, digit);
+    ctx.restore();
+  }
+
+  if(stageMode === "solid"){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, opacity + 0.22);
+    ctx.translate(left, top);
+    ctx.scale(size/100, size/100);
+    drawStrokeHints(ctx, digit);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, opacity + 0.22);
+  ctx.translate(left, top);
+  ctx.scale(size/100, size/100);
+  drawStartPoint(ctx, digit);
+  ctx.restore();
+}
+
+/* =========
+   Tabs
+   ========= */
+const tab1 = document.getElementById("tab1");
+const tab2 = document.getElementById("tab2");
+const view1 = document.getElementById("view1");
+const view2 = document.getElementById("view2");
+
+tab1.addEventListener("click", ()=>setTab(1));
+tab2.addEventListener("click", ()=>setTab(2));
+
+function setTab(n){
+  if(n===1){
+    tab1.classList.add("active"); tab2.classList.remove("active");
+    view1.style.display="grid"; view2.style.display="none";
+  } else {
+    tab2.classList.add("active"); tab1.classList.remove("active");
+    view2.style.display="grid"; view1.style.display="none";
+  }
+}
+
+/* =========
+   Aufgabe 1: Trace Canvas
+   ========= */
+const traceCanvas = document.getElementById("traceCanvas");
+const tctx = traceCanvas.getContext("2d");
+
+let currentDigit = 1;
+let stage = "solid";
+let pen = { size: 14 };
+let guideOpacity = 0.70;
+
+const digitLabel = document.getElementById("digitLabel");
+const stageHint = document.getElementById("stageHint");
+const checkFreeBtn = document.getElementById("checkFree");
+
+const inkLayer = document.createElement("canvas");
+inkLayer.width = traceCanvas.width;
+inkLayer.height = traceCanvas.height;
+const ictx = inkLayer.getContext("2d");
+
+let overlayTimer = null;
+let overlayShowing = false;
+
+function cancelOverlay(){
+  if(overlayTimer){
+    clearTimeout(overlayTimer);
+    overlayTimer = null;
+  }
+  overlayShowing = false;
+}
+
+function redrawTraceBoard(clearInk){
+  if(overlayShowing) return;
+  tctx.clearRect(0,0,traceCanvas.width, traceCanvas.height);
+  drawDigitTemplate(tctx, currentDigit, stage, guideOpacity);
+  if(clearInk) ictx.clearRect(0,0,inkLayer.width, inkLayer.height);
+  tctx.drawImage(inkLayer, 0, 0);
+}
+
+function setStageUI(){
+  document.querySelectorAll(".chip").forEach(ch=>{
+    ch.classList.toggle("active", ch.dataset.stage === stage);
+  });
+  const map = {
+    solid:"Spure die Zahl nach. Bleib auf der Linie!",
+    dashed:"Jetzt ist es schwerer: Folge den Strichen!",
+    dotted:"Nur noch Punkte. Verbinde sie sauber!",
+    none:"Jetzt frei schreiben: Schreib die Zahl allein (Startpunkt hilft)!"
+  };
+  stageHint.textContent = map[stage] || "";
+  checkFreeBtn.style.display = (stage === "none") ? "inline-block" : "none";
+}
+
+/* =========
+   Overlay-Vergleich: NUR nach Klick auf „Prüfen“
+   ========= */
+function drawOverlayComparison(){
+  const w = traceCanvas.width, h = traceCanvas.height;
+
+  tctx.clearRect(0,0,w,h);
+  drawDigitTemplate(tctx, currentDigit, "none", guideOpacity);
+  tctx.drawImage(inkLayer, 0, 0);
+
+  const size = Math.min(w, h) * 0.78;
+  const left = (w - size) / 2;
+  const top  = (h - size) / 2;
+
+  tctx.save();
+  tctx.globalAlpha = 0.35;
+  tctx.strokeStyle = "#ff6b6b";
+  tctx.lineWidth = 16;
+  tctx.lineCap = "round";
+  tctx.lineJoin = "round";
+  tctx.setLineDash([]);
+  tctx.translate(left, top);
+  tctx.scale(size/100, size/100);
+  strokeDigit(tctx, currentDigit);
+  tctx.restore();
+}
+
+function showOverlayFor(ms=2000){
+  cancelOverlay();
+  overlayShowing = true;
+  drawOverlayComparison();
+  overlayTimer = setTimeout(()=>{
+    overlayShowing = false;
+    redrawTraceBoard(false);
+  }, ms);
+}
+
+checkFreeBtn.addEventListener("click", ()=>{
+  if(stage !== "none") return;
+  showOverlayFor(2000);
+});
+
+/* Buttons / Wechsel */
+document.getElementById("prevDigit").addEventListener("click", ()=>{
+  currentDigit = (currentDigit + 9) % 10;
+  digitLabel.textContent = currentDigit;
+  cancelOverlay();
+  redrawTraceBoard(true);
+});
+document.getElementById("nextDigit").addEventListener("click", ()=>{
+  currentDigit = (currentDigit + 1) % 10;
+  digitLabel.textContent = currentDigit;
+  cancelOverlay();
+  redrawTraceBoard(true);
+});
+document.getElementById("clearInk").addEventListener("click", ()=>{
+  cancelOverlay();
+  redrawTraceBoard(true);
+});
+
+document.getElementById("nextStage").addEventListener("click", ()=>{
+  const order = ["solid","dashed","dotted","none"];
+  stage = order[Math.min(order.indexOf(stage)+1, order.length-1)];
+  cancelOverlay();
+  setStageUI();
+  redrawTraceBoard(true);
+});
+
+document.querySelectorAll(".chip").forEach(ch=>{
+  ch.addEventListener("click", ()=>{
+    stage = ch.dataset.stage;
+    cancelOverlay();
+    setStageUI();
+    redrawTraceBoard(true);
+  });
+});
+
+const penSize = document.getElementById("penSize");
+const penSizeVal = document.getElementById("penSizeVal");
+penSize.addEventListener("input", ()=>{
+  pen.size = Number(penSize.value);
+  penSizeVal.textContent = pen.size;
+});
+
+const guideSlider = document.getElementById("guideOpacity");
+const guideOpacityVal = document.getElementById("guideOpacityVal");
+guideSlider.addEventListener("input", ()=>{
+  guideOpacity = Number(guideSlider.value)/100;
+  guideOpacityVal.textContent = Math.round(guideOpacity*100) + "%";
+  cancelOverlay();
+  redrawTraceBoard(false);
+});
+
+/* Zeichnen */
+let drawing=false, last=null;
+
+function getPos(evt){
+  const rect = traceCanvas.getBoundingClientRect();
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+  return {
+    x:(clientX-rect.left) * (traceCanvas.width/rect.width),
+    y:(clientY-rect.top) * (traceCanvas.height/rect.height)
+  };
+}
+
+function startDraw(evt){
+  if(overlayShowing) return;
+  drawing=true;
+  last=getPos(evt);
+  evt.preventDefault();
+}
+function moveDraw(evt){
+  if(!drawing) return;
+  const p=getPos(evt);
+
+  ictx.save();
+  ictx.lineCap="round";
+  ictx.lineJoin="round";
+  ictx.strokeStyle="#4dabf7";
+  ictx.lineWidth=pen.size;
+  ictx.beginPath();
+  ictx.moveTo(last.x,last.y);
+  ictx.lineTo(p.x,p.y);
+  ictx.stroke();
+  ictx.restore();
+
+  last=p;
+  redrawTraceBoard(false);
+  evt.preventDefault();
+}
+function endDraw(evt){
+  drawing=false;
+  last=null;
+  evt.preventDefault();
+}
+
+traceCanvas.addEventListener("mousedown", startDraw);
+traceCanvas.addEventListener("mousemove", moveDraw);
+window.addEventListener("mouseup", endDraw);
+
+traceCanvas.addEventListener("touchstart", startDraw, {passive:false});
+traceCanvas.addEventListener("touchmove", moveDraw, {passive:false});
+traceCanvas.addEventListener("touchend", endDraw, {passive:false});
+
+/* =========
+   Aufgabe 2: Sterne + Schwierigkeit
+   ========= */
+const levelDefs = [
+  { name: "Einsteiger",      tag: "Einsteiger",      mode: "easy"   },
+  { name: "Fortgeschritten", tag: "Fortgeschritten", mode: "medium" },
+  { name: "Profi",           tag: "Profi",           mode: "hard"   },
+  { name: "Meister",         tag: "Meister",         mode: "master" },
+];
+let stars = 0;        // 0..9
+let levelIndex = 0;   // 0..3
+
+const starsEl = document.getElementById("stars");
+const levelTagEl = document.getElementById("levelTag");
+
+function renderStars(){
+  starsEl.textContent = "⭐".repeat(stars) + "☆".repeat(10 - stars);
+  levelTagEl.textContent = levelDefs[levelIndex].tag;
+}
+
+function addStar(){
+  stars++;
+  if(stars >= 10){
+    stars = 0;
+    levelIndex = Math.min(levelIndex + 1, levelDefs.length - 1);
+  }
+  renderStars();
+}
+
+/* =========
+   Aufgabe 2: Auswahl – NUR dieselbe Ziffer, nur Spiegel/Varianten
+   ========= */
+const motivational = [
+  "Fast! Schau nochmal genau hin 👀",
+  "Guter Versuch! Überleg nochmal 😊",
+  "Nicht schlimm – nochmal probieren! 🌈",
+  "Du schaffst das! 💪"
+];
+const cheers = [
+  "Super! Richtig! ⭐",
+  "Juhu! Das stimmt! 🎉",
+  "Klasse gemacht! 🏆",
+  "Perfekt! 🌟",
+  "Richtig – spitze! 🚀"
+];
+
+const findDigitEl = document.getElementById("findDigit");
+const choicesEl = document.getElementById("choices");
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
+const toastIcon = document.getElementById("toastIcon");
+const reward2 = document.getElementById("reward2");
+
+document.getElementById("newRound").addEventListener("click", newRound);
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+/* ✅ exakt nach deiner Beschreibung */
+function buildOptionsSameDigitOnly(){
+  const mode = levelDefs[levelIndex].mode;
+
+  // “Klassische” Spiegelungen
+  const variants = [
+    {kind:"correct", sx: 1,  sy: 1,  rot: 0},   // richtig
+    {kind:"wrong",   sx:-1,  sy: 1,  rot: 0},   // spiegel X
+    {kind:"wrong",   sx: 1,  sy:-1,  rot: 0},   // spiegel Y
+    {kind:"wrong",   sx:-1,  sy:-1,  rot: 0},   // spiegel XY
+  ];
+
+  if(mode === "easy"){
+    // Einsteiger: 2 Optionen -> korrekt + 1 klare Spiegelung (X)
+    return shuffle([ variants[0], variants[1] ]);
+  }
+
+  if(mode === "medium"){
+    // Fortgeschritten: 3 Optionen -> korrekt + 2 unterschiedliche Spiegelungen (X, Y)
+    return shuffle([ variants[0], variants[1], variants[2] ]);
+  }
+
+  if(mode === "hard"){
+    // Profi: 4 Optionen -> korrekt + 3 Spiegelungen (X, Y, XY)
+    return shuffle([ variants[0], variants[1], variants[2], variants[3] ]);
+  }
+
+  // Meister: 4 Optionen -> subtiler, aber grundschultauglich
+  // (leichte Unterschiede: minimal skaliert / leicht rotiert)
+  return shuffle([
+    {kind:"correct", sx: 1,     sy: 1,     rot: 0},
+    {kind:"wrong",   sx:-0.95,  sy: 1,     rot: 0},     // fast Spiegel X
+    {kind:"wrong",   sx: 1,     sy:-0.95,  rot: 0},     // fast Spiegel Y
+    {kind:"wrong",   sx:-1,     sy: 1,     rot: 0.06},  // Spiegel X + leichte Drehung
+  ]);
+}
+
+function setChoiceGridColumns(n){
+  // Desktop: 2/3/2x2
+  if(n === 2){
+    choicesEl.style.gridTemplateColumns = "repeat(2, 1fr)";
+  } else if(n === 3){
+    choicesEl.style.gridTemplateColumns = "repeat(3, 1fr)";
+  } else {
+    choicesEl.style.gridTemplateColumns = "repeat(2, 1fr)";
+  }
+}
+
+function newRound(){
+  toast.style.display="none";
+  const target = Math.floor(Math.random()*10);
+  findDigitEl.textContent = target;
+
+  const opts = buildOptionsSameDigitOnly();
+  setChoiceGridColumns(opts.length);
+  choicesEl.innerHTML="";
+
+  opts.forEach(opt=>{
+    const div=document.createElement("div");
+    div.className="choice";
+    const c=document.createElement("canvas");
+    c.width=420; c.height=180;
+    div.appendChild(c);
+
+    drawChoiceDigit(c.getContext("2d"), target, opt);
+
+    div.addEventListener("click", ()=>{
+      const isCorrect = (opt.kind === "correct");
+
+      if(isCorrect){
+        playFanfare1s();
+        launchConfetti(1100);
+        addStar();
+
+        div.classList.add("correct");
+        toast.className="toast good";
+        toastText.textContent = pick(cheers);
+        toastIcon.textContent = pick(["🏆","🎉","⭐","🌟"]);
+        reward2.textContent = pick(["🏆","🎉","⭐","🌟","🥇"]);
+      } else {
+        playLose1s();
+        div.classList.add("wrong");
+        toast.className="toast bad";
+        toastText.textContent = pick(motivational);
+        toastIcon.textContent = pick(["🙂","💡","🧠","🌈"]);
+        reward2.textContent = pick(["🙂","🌈","💡","🧠","💪"]);
+      }
+
+      toast.style.display="flex";
+    });
+
+    choicesEl.appendChild(div);
+  });
+}
+
+function drawChoiceDigit(ctx, digit, opt){
+  const w=ctx.canvas.width, h=ctx.canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#fff";
+  ctx.fillRect(0,0,w,h);
+
+  ctx.save();
+  ctx.translate(w/2, h/2);
+
+  // ✅ in Aufgabe 2 verwenden wir sx/sy/rot (Meister subtil)
+  const sx = (typeof opt.sx === "number") ? opt.sx : (opt.mirrorX ? -1 : 1);
+  const sy = (typeof opt.sy === "number") ? opt.sy : (opt.mirrorY ? -1 : 1);
+  ctx.scale(sx, sy);
+  if(opt.rot) ctx.rotate(opt.rot);
+
+  ctx.strokeStyle="#111";
+  ctx.lineWidth=14;
+  ctx.lineCap="round";
+  ctx.lineJoin="round";
+
+  const size = Math.min(w,h)*0.78;
+  ctx.translate(-size/2, -size/2);
+  ctx.scale(size/100, size/100);
+
+  strokeDigit(ctx, digit);
+
+  ctx.restore();
+}
+
+/* =========
+   Init
+   ========= */
+digitLabel.textContent = currentDigit;
+setStageUI();
+redrawTraceBoard(true);
+renderStars();
+newRound();
+</script>
+</body>
+</html>
